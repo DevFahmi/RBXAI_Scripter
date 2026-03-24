@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>RBXAI GOD MODE</title>
+<style>
+body{background:#0b0f1a;color:#fff;font-family:sans-serif;margin:0}
+#chat{height:80vh;overflow:auto;padding:20px}
+.msg{margin:10px 0}
+.user{color:#61afef}
+.ai{color:#98c379}
+.typing{opacity:0.6}
+input{width:75%;padding:10px}
+button{padding:10px}
+</style>
+</head>
+<body>
+
+<div id="chat"></div>
+<div style="padding:10px">
+<input id="input"/>
+<button onclick="send()">Send</button>
+</div>
+
+<script>
+let history = JSON.parse(localStorage.getItem("chat")||"[]");
+
+function render(){
+  const chat=document.getElementById("chat");
+  chat.innerHTML="";
+  history.forEach(m=>{
+    const div=document.createElement("div");
+    div.className="msg "+(m.role==="user"?"user":"ai");
+    div.textContent=(m.role==="user"?"U: ":"AI: ")+m.content;
+    chat.appendChild(div);
+  });
+}
+
+render();
+
+async function send(){
+  const input=document.getElementById("input");
+  const text=input.value;
+  if(!text) return;
+  input.value="";
+  history.push({role:"user",content:text});
+  render();
+
+  const res=await fetch("/api/chat",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({messages:history})
+  });
+
+  const data=await res.json();
+  let reply=data.content?.[0]?.text||"error";
+
+  // typing animation
+  let out="";
+  const div=document.createElement("div");
+  div.className="msg ai typing";
+  document.getElementById("chat").appendChild(div);
+
+  for(let c of reply){
+    out+=c;
+    div.textContent="AI: "+out;
+    await new Promise(r=>setTimeout(r,10));
+  }
+
+  history.push({role:"assistant",content:reply});
+  localStorage.setItem("chat",JSON.stringify(history));
+  render();
+}
+</script>
+
+</body>
+</html>
